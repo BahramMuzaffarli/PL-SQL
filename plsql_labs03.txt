@@ -1,0 +1,373 @@
+1. Embedding SQL in PL/SQL
+   it is possible to use in PL/sQL programs the following SQL statements without any syntax changes
+   INSERT, UPDATE, DELETE, COMMIT, ROLLBACK, SAVEPOINT
+   Important Note:
+   A PL/SQL program IS NOT a transactional processing unit.
+
+   
+   Additionally to above statements it is possible to use in  PL/SQL programs the SELECT statement, but with some syntax changes:
+
+
+   syntax:
+   SELECT column1, column2, ... ,columnN
+   INTO   variable1, variable2, ... ,variableN
+   FROM ...
+   
+
+   Notes:
+   a. SELECT INTO statement MUST return exactly one row, otherwise it'll return an error: 
+      - if it returns more, than one row: TOO_MANY_ROWS
+      - if it does not return any row: NO_DATA_FOUND
+
+   b. data types and number of variables in INTO clause must be exactly the same as number and data types of expressions in SELECT cl.
+
+   c. It is possible to use in SQL statetements embedded in PL/SQL code:
+      - PL/SQL variables
+      - procedures and functions parameters
+      in every place, where it is possible to use literals (for example in WHERE, in SET cl. of UPDATE statement etc .)
+
+  It is not possible to use DDL and DCL statements in PL/SQL programs. To break this limitation there is need to use so called dynamic SQL
+
+  examples:
+
+  create or replace function get_max_sal(p_deptno number) return number
+  is
+     v_max_sal number(10);
+  begin
+     select max(salary)
+     into v_max_sal
+     from employees
+     where department_id = p_deptno;
+
+     return v_max_sal;
+  end;
+
+  create or replace procedure set_new_salary(p_employee_id number, p_new_sal number)
+  is
+  begin
+     update employees
+     set salary = p_new_sal
+     where employee_id = p_employee_id;
+
+     commit;
+  end;
+
+2. PL/SQL tables and records
+   PL/SQL tablesa and records are aggregated data types, which means, that their variables can store more, than 1 value.
+   We should not confuse PL/SQL tables and records with database tables and rows.
+   declaration of variables of such types consists always of two steps
+     - type declaration
+     - variable declaration
+   a) PL/SQL tables
+      Tables (arrays) in PL/SQL have only maximum size set (2^32), since then they are dynamic, i.e. their real size (number of elements) can be change during program execution
+      All elements are exactly of the same data type, defined at the stage of defininig table type. 
+      to access an table's element there is need to use table's index (a number of an element in a table)
+      In opposition to other programming languages, there is no multidimensional tables in PL/SQL, but it is possible to declare, for example, a table of tables
+
+      syntax
+      type declaration
+      TYPE table_type_name IS TABLE OF element_type INDEX BY BINARY_INTEGER | VARCHAR2(length);
+
+      variable declaration
+      table_varialbe table_type_name;
+
+      accessing Nth element of a table
+      table_variable(N)
+
+      example:
+      create or replace procedure print_natural_numbers (p_limit number)
+      is
+         type t_natural_numbers is table of number(10) index by binary_integer;   -- type declaration
+ 
+         v_natural_numbers t_natural_numbers;                                     -- variable declaration
+      begin
+         for i in 1..p_limit loop   --an example of the FOR loop
+             v_natural_numbers(i) := i;
+         end loop;
+
+         for i in 1..p_limit loop
+             dbms_output.put_line(v_natural_numbers(i));
+         end loop;
+      end;
+
+
+    Because of the fact, that PL/SQL tables can change their size during a program execution, particuralry they can hav "holes", every table has a set of attributes, 
+    allowing for checking its properties.
+    a) if Nth element exists var.exists(i)
+    b) which element has the lowest index: var.first
+    c) which element has the highest index: var.last
+    d) which is the index of the next element: var.next(i)
+    e) which is the index of the previous element: var.prior(i)
+    f) what is the number of elements : var.count
+
+    example:
+      example:
+      create or replace procedure print_natural_numbers (p_limit number)
+      is
+         type t_natural_numbers is table of number(10) index by binary_integer;   -- type declaration
+ 
+         v_natural_numbers t_natural_numbers;                                     -- variable declaration
+      begin
+         for i in 1..p_limit loop   --an example of the FOR loop
+             v_natural_numbers(i) := i;
+         end loop;
+
+         for i in 1..p_limit loop
+             dbms_output.put_line(v_natural_numbers(i));
+         end loop;
+      
+         dbms_output.put_line(v_natural_numbers.first);
+         dbms_output.put_line(v_natural_numbers.last);
+	   dbms_output.put_line(v_natural_numbers.count);
+      end;
+
+  
+   b) PL/SQl records
+   A PL/SQL record is an aggregated data structure consisting of fields. It is similar to records in Pascal or structures in C/C++
+   Different fields can be of different data types.
+   Every field has its own, unique name
+
+   syntax
+   type declaration
+   TYPE record_type IS RECORD ( name_of_field1 type1 [:=default_vaule],
+                                name_of_field2 type2 [:=default_value],
+                                  ...
+                                  name_of_fieldN typeN [:=default_value] );
+
+   variable declaration:
+   variable_name record_type;
+
+
+   to access a field in the record there is need to use a dot notation: record_variable.field_name
+   
+
+   example:
+   create or replace procedure ins_new_dept(p_deptno number, p_dname varchar2, p_manager_id number, p_location_id number)
+   is
+      type t_dept_record is record (department_id   number(4),              -- type declaration T_DEPT_RECORD
+                               department_name varchar2(30),
+                               manager_id      number(6),
+                               location_id     number(4) );
+     v_dept_record t_dept_record;                                      -- variable declaration V_DEPT_RECORD
+   begin
+     v_dept_record.department_id   := p_deptno;
+     v_dept_record.department_name := p_dname;
+     v_dept_record.manager_id      := p_manager_id;
+     v_dept_record.location_id     := p_location_id;
+
+     insert into departments values v_dept_record;                      
+
+     commit;
+   end;
+
+   Simplified declaration of a record, which uses a database table to provide its structure
+   
+   record_variable database_table%rowtype;
+ 
+   example:
+   create or replace function get_salary(p_emp_id number) return number
+   is
+      v_employee employees%rowtype;     -- v_employee has exactly the same structure as employees table (fields and their data types)
+   begin
+      select *
+      into v_employee
+      from employees
+      where employee_id = p_emp_id;
+
+      return v_employee.salary;
+   end;
+ 
+  
+3. Loops
+   Loops allow for multiple execution of the same set of instructions
+
+   There are 3 types of loop in PL/SQL language
+   
+   a) basic
+      syntax:
+      LOOP
+          instructions
+      END LOOP;
+      
+      It is required to place EXIT WHEN CONDITION inside of this loop, otherwise such loop becomes infinite
+
+
+   example: printing of squares of natural numbers:
+
+   create or replace procedure print_squares(p_limit number)
+   is
+      i number(10) := 1;
+   begin
+      loop
+          exit when i > p_limit;
+          dbms_output.put_line(i*i);
+          i := i + 1;
+      end loop;
+   end;
+
+     
+   b) FOR - iterative loop
+      FOR i IN lower_limit..upper_limit [REVERSE] LOOP
+          instructions
+      END LOOP;
+
+   - there's no need to increment loop's index manually
+   - there's no need to declare loop's index 
+   - if we use REVERSE keyword, then index will be automatically decreased by 1 at every iteration
+
+   example: printing of squares of natural numbers:
+
+   create or replace procedure print_squares(p_limit number)
+   is
+   begin
+     for i in 1..p_limit loop
+         dbms_output.put_line(i*i);
+     end loop;
+   end;
+
+
+   c) WHILE
+
+
+    WHILE condition LOOP
+      instructions
+    END LOOP;
+
+  example: printing of squares of natural numbers:
+
+   create or replace procedure print_squares(p_limit number)
+    is
+       i number(10) := 1;
+    begin
+       while i<=p_limit loop
+         dbms_output.put_line(i*i);
+         i := i+1;
+      end loop;
+    end;  
+
+
+excercises 
+
+1. write a function,  which returns maximum salary of employees working in a department, which number is provided as the function parameter p_dept_id
+
+create or replace max_salary
+
+begin
+select max(salary) into p_dept_id
+end;
+
+
+CREATE OR REPLACE FUNCTION GET_MAX_SALARY(p_dept_id IN NUMBER) RETURN NUMBER IS
+    v_max_salary NUMBER;
+BEGIN
+    -- Find the maximum salary of employees working in the specified department
+    SELECT MAX(SALARY) INTO v_max_salary
+    FROM EMPLOYEES
+    WHERE DEPARTMENT_ID = p_dept_id;
+
+    -- Return the maximum salary
+    RETURN v_max_salary;
+END;
+/
+
+DECLARE
+    v_dept_max_salary NUMBER;
+BEGIN
+    v_dept_max_salary := GET_MAX_SALARY(100);
+    DBMS_OUTPUT.PUT_LINE('The maximum salary for department 100 is: ' || v_dept_max_salary);
+END;
+/
+
+
+
+2. modify this function in a way, which would allow to provide in appropriate parameter a NAME of department instead of its number 
+
+CREATE OR REPLACE FUNCTION GET_MAX_SALARY(p_dept IN VARCHAR2) RETURN NUMBER IS
+    v_max_salary NUMBER;
+BEGIN
+    -- Find the maximum salary of employees working in the specified department
+    SELECT MAX(SALARY) INTO v_max_salary
+    FROM EMPLOYEES E
+    JOIN DEPARTMENTS D ON E.DEPARTMENT_ID = D.DEPARTMENT_ID
+    WHERE D.DEPARTMENT_NAME = p_dept;
+
+    -- Return the maximum salary
+    RETURN v_max_salary;
+END;
+/
+
+DECLARE
+    v_dept_max_salary NUMBER;
+BEGIN
+    v_dept_max_salary := GET_MAX_SALARY('Sales');
+    DBMS_OUTPUT.PUT_LINE('The maximum salary for the Sales department is: ' || v_dept_max_salary);
+END;
+/
+
+
+3. write procedure, which will modify salary of employees in the following way
+   - p_dept_id parameter will be used to provide to this procedure information about which department will be covered by this change
+   - p_percent parameter is the percent of increase
+   - procedure should commit the transaction
+
+CREATE OR REPLACE PROCEDURE UPDATE_SALARY_BY_PERCENT(p_dept_id IN NUMBER, p_percent IN NUMBER) IS
+BEGIN
+    -- Update the salaries of employees in the specified department
+    UPDATE EMPLOYEES
+    SET SALARY = SALARY * (1 + p_percent / 100)
+    WHERE DEPARTMENT_ID = p_dept_id;
+
+    -- Commit the transaction
+    COMMIT;
+END;
+/
+
+BEGIN
+    INCREASE_SALARIES(100, 10); -- Increase salaries in department 100 by 10%
+END;
+/
+
+
+Homework
+write a procedure, which will insert a new row into JOB_GRADES table
+
+GRADE_LEVEL of this new row should be set automatically inside of this procedure to max(GRADE_lEVEL) + 1
+LOVEST_SAL of this new row should be set automatically inside of this procedure to max(HIGHEST_SAL) + 1
+HIGHES_SAL of this new row should be set automatically inside of this procedure to LOVEST_SAL of this new row + 1000
+
+
+CREATE OR REPLACE PROCEDURE INSERT_JOB_GRADE IS
+    new_grade_level  NUMBER;
+    new_lovest_sal   NUMBER;
+BEGIN
+    -- Get the maximum grade level from the table and add 1 to it
+    SELECT MAX(GRADE_LEVEL) + 1 INTO new_grade_level FROM JOB_GRADES;
+
+    -- Get the maximum highest salary from the table and add 1 to it
+    SELECT MAX(HIGHEST_SAL) + 1 INTO new_lovest_sal FROM JOB_GRADES;
+
+    -- Insert the new row into the table
+    INSERT INTO JOB_GRADES (GRADE_LEVEL, LOVEST_SAL, HIGHEST_SAL)
+    VALUES (new_grade_level, new_lovest_sal, new_lovest_sal + 1000);
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('New row inserted successfully.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error inserting new row: ' || SQLERRM);
+END;
+/
+
+BEGIN
+    INSERT_JOB_GRADE;
+END;
+/
+
+
+
+
+
+
+
+

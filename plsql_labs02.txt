@@ -1,0 +1,258 @@
+Witold Świerzy
+wswier@sgh.waw.pl
+-----------------
+https://www.e-sgh.pl/witold_swierzy/236480-0639
+
+
+syntax of CREATE PROCEDURE command:
+CREATE [OR REPLACE] PROCEDURE procedure_name [(list_of_parameters)]
+IS
+	variables declaration section
+BEGIN
+	executable section
+END;
+/
+
+list_of_parameters:= parameter1_definition [, parameter2_definition [, parameter3_definition ...]]
+
+parameterN_definition := name [IN|OUT|IN OUT] type [:= default_value]
+
+IN     - IN parameter, such parameters inside of a procedure act like constants (it can be used as a source of a value but we cannot assign to uit a new value)
+         real parameter during a procedure call can be literal, variable, expression. This qualifier is default
+ 
+OUT    - OUT parameter, such parameters inside of a procedure act like non-initialized variables (we can assign to them new values, but we cannot use them as sources of values)
+         real parameter must be a variable
+
+IN OUT - such parameters inside of a procedure act as initialized variables (we can use them as sources of values as well as we can assign to them new values)
+	 real parameter must be a variable
+
+default value is used inside of a procedure when during a procedure call we don't provide its value
+
+example:
+
+create or replace procedure ins_new_dept(p_deptno number, p_dname varchar2 := 'NONAME')
+is
+begin
+   insert into departments (department_id, department_name)
+   values (p_deptno, p_dname);
+   
+   commit;
+end;
+/
+
+an example call of this procedure:
+
+begin
+	ins_new_dept(100,'Kadry');
+end;
+
+or
+
+begin
+	ins_new_dept(110);
+end;
+
+2. functions
+syntax of the command which is being used to create a function:
+
+CREATE [OR REPLACE] FUNCTION function_name[(list_of_parameters)] RETURN type_of_result
+IS
+	variables declaration section
+BEGIN
+	executable section
+END;
+/
+
+function's excutable section must contain at least one RETURN instruction - this instruction returns result of a function execution
+
+example:
+
+create or replace function get_increased_salary(p_salary number, p_percent number := 10) return number
+is
+begin
+	return p_salary + p_salary*p_percent/100;
+end;
+/
+
+
+an example call of this function
+
+declare
+	v_result number(10);
+begin
+	v_result := get_increased_salary(3000,12);
+	dbms_output.put_line('Increased salary is equal to: '||v_result);
+end;
+
+or
+
+
+declare
+	v_result number(10);
+begin
+	v_result := get_increased_salary(3000);
+	dbms_output.put_line('Increased salary is equal to: '||v_result);
+end;
+
+NOTE
+-----
+in definitions of parameters of functions and procedures and in declaration of result type for function we cannot provide lengths of them
+
+for example, below declaration of p_parameter is correct
+  p_parameter NUMBER
+while this one is incorrect:
+  p_parametr NUMBER(10)
+
+
+some PL/SQL functions can be also called in SQL commands, for example:
+
+select employee_id, last_name, first_name, salary, get_increased_salary(salary,13)
+from employees
+where get_increased_salary(salary,20) < 5000;
+
+Requirements:
+1. a PL/SQL function can be used in the following SQL statements and clauses:
+	cl. SELECT of SELECT statement
+	cl. WHERE
+	cl. GROUP BY of SELECT statement
+	cl. VALUES of INSERT statement
+	cl. SET of UPDATE statement
+
+2. result type and types of parameters of the function must be available in SQL
+3. a function called in DML statements cannot modify the content of a table, which is being modified by this DML statement
+4. a function called in DML and SELECT statement cannot contain COMMIT and ROLLBACK statements
+6. a function called in parallelized SQL statements cannot modify any tables
+
+3. conditional statement IF
+syntax
+	IF condition1 THEN
+		instruction_sequence_1;
+	[ELSIF condition2 THEN
+	        instruction_sequence_2;
+        [ELSIF condition3 THEN
+	        instruction_sequence_3;
+        ...
+        [ELSE
+                instruction_sequence_N1]]];
+        END IF;
+
+
+in conditions we can use the following operators, known from SQL:
+
+1. arithmetic
+   =,>,<,<>,<=,>=
+2. IS NULL, IS NOT NULL
+3. LIKE, NOT LIKE
+4. IN, NOT IN
+5. BETWEEN, NOT BETWEEN
+
+6. logical (AND, OR, NOT)
+   1. NOT
+   2. AND
+   3. OR
+   ()
+   TRUE AND NULL <=> NULL
+   FALSE AND NULL <=> FALSE
+
+   TRUE OR NULL <=> TRUE
+   FALSE OR NULL <=> NULL
+  
+   NOT NULL <=> NULL
+
+example:
+create or replace function fun1(p_param varchar2) return varchar2 is 
+begin
+  if p_param is null then
+    return 'NULL';
+  elsif p_param like 'S%' then
+    return 'S';
+  elsif p_param in ('a','b','c') then
+    return 'abc';
+  else
+    return 'other value';
+  end if;
+end;
+
+
+excercise:
+1. write a function, which
+   - accepts two parameters: p_job_id of VARCHAR2 type, p_salary of NUMBER type
+   - calculates and returns employee's new salary in the following way
+     a) if p_job_id is equal to 'ST_MAN', it returns p_salary increased by 10%
+     b) if p_job_id is equal to 'ST_CLERK', it returns p_salary increased by 5%
+     c) in all other cases it returns p_salary increased by 15%
+
+     call this function in the SELECT statement, which prints first_name, last_name, salary and a new salary calculated by this function call
+
+
+create or replace function new_salary(p_job_id varchar2 , p_salary number) 
+return number is new_salary number;
+begin
+  if p_job_id = 'ST_MAN' then
+     new_salary := p_salary + p_salary*10/100;
+  elsif p_job_id = 'ST_CLERK' then
+    new_salary := p_salary + p_salary*5/100;
+  else 
+    new_salary:= p_salary + p_salary*15/100; 
+  end if; 
+ return new_salary;
+end;
+
+
+select *from user_errors
+
+
+SELECT first_name, last_name, salary, new_salary(job_id,salary)
+FROM employees;
+
+
+homework
+2. write a procedure, which will add two complex numbers a+bi and c+di
+   this procedure should accept 6 parameters:
+   - real part of the first complex number, IN
+   - imaginary part of the first complex number, IN
+   - real part of the second complex number, IN
+   - imaginary part of the second complex number, IN
+   - real part of the result, OUT
+   - imaginary part, OUT
+
+
+   call this procedure in an anonymous PL/SQL block and print out the result by calling DBMS_OUTPUT.PUT_LINE
+
+
+CREATE OR REPLACE PROCEDURE add_complex_numbers(
+    a IN NUMBER, -- Real part of the first complex number
+    b IN NUMBER, -- Imaginary part of the first complex number
+    c IN NUMBER, -- Real part of the second complex number
+    d IN NUMBER, -- Imaginary part of the second complex number
+    result_real OUT NUMBER, -- Real part of the result
+    result_imag OUT NUMBER -- Imaginary part of the result
+)
+IS
+BEGIN
+    result_real := a + c; -- Add the real parts
+    result_imag := b + d; -- Add the imaginary parts
+END;
+/
+
+
+DECLARE
+    a NUMBER := 1;
+    b NUMBER := 2;
+    c NUMBER := 3;
+    d NUMBER := 4;
+    result_real NUMBER;
+    result_imag NUMBER;
+BEGIN
+    add_complex_numbers(a, b, c, d, result_real, result_imag);
+    DBMS_OUTPUT.PUT_LINE('Result: ' || result_real || ' + ' || result_imag || 'i');
+END;
+/
+
+
+
+
+
+
+
+

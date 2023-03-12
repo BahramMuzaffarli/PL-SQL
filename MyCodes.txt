@@ -1,0 +1,22 @@
+####################### AD SOYAD YAZMAQ 1 #############################################
+declare
+
+v_name varchar2(10);
+v_surname varchar2(10);
+
+begin
+    v_name:= 'Bahram';
+    v_surname:= 'Muzaffarli';
+
+    dbms_output.put_line('My name is '||v_name||' '||v_surname);
+end;
+####################### AD SOYAD YAZMAQ 2 #############################################
+declare
+
+v_name varchar2(10) := 'Bahram';
+v_surname varchar2(10) := 'Muzaffarli';
+
+begin
+dbms_output.put_line('Menim adim '||v_name ||' '||v_surname||' ' ||'dir');
+end;
+##########################################################################

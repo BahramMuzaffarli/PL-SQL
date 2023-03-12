@@ -1,0 +1,184 @@
+Witold Świerzy
+wswier@sgh.waw.pl
+-----------------
+
+www.oracle.com
+--------------
+
+Business Rule: a rule ensuring data consistency, ie its correctness on the application logic. 
+
+Examples of declarative business rules: primary key, unique key, foreign key
+Such rules don't need to be implemented in any programming language by a developing a code - instead of this we can DECLARE
+them at the table definition level - this is why they are called "DECLARATIVE business rules"
+However not every business rule can be simply declared. Some of them are too complex for that. This is the reason why
+most of relational databases implemented specialized programming languages allowing for CODING such rules and storing them
+in the database.
+
+For example in MS SQL Server there is TransactSQL programming language implemented.
+PostgreSQL has its own programming language, called PgPLSQL.
+In case of Oracle database this programming language is called PL/SQL.
+In oposition to SQL, these programming languages are not standarized. Every such language has its own syntax, 
+set of libraries etc.
+
+
+PL/SQL
+------
+PL/SQL is a programming language. In opposition to SQL it provides
+- condition expressions
+- loops
+- procedures, functions and other programming blocks.
+
+It supports SQL in a way, that it is possible to use some SQL statements in PL/SQL programs without any syntax changes, while
+some other statements (like SELECT) can be used in a changed form.
+
+It is a structural programming language, which has also some object-oriented features implemented.
+
+Types of PL/SQL programs:
+anonymous PL/SQL blocks
+procedures
+functions
+packages (libraries)
+triggers
+ 
+
+Anonymous PL/SQL blocks are unnamed programs, which means, that it cannot be stored in a database.
+Lifecycle of an anonymous PL/SQL block is, since then, different, than in case of stored programs:
+- writing the code
+- sending the code into a database server
+- database server compiles the code and executes it
+- after execution server sends potential results to the programmer's session
+- the database server does not store the code (to reexecute it we need to send it once again) 
+
+example:
+DECLARE
+   x number(10) := 5;
+BEGIN
+   DBMS_OUTPUT.PUT_LINE(x*2);
+END;
+/
+
+PL/SQL procedure is a named block, which means, that it can be stored in a database. 
+In general - a procedure is a program, which does not return any results (in opposition to functions).
+Lifecycle of a PL/SQL procedure is different, that licecycle of an anonymous block: 
+- writing the code
+- sending the code to a database server
+- the database server compiles the code and STORES it in its database and DOES NOT execute it.
+- to execute a procedure there is need to call it.
+- next executions are possible without sending the code to a database server (we simply need to call it again)
+- because of the fact, that the database server stores the procedure's code in its databaase we also call PL/SQL procedures
+  STORED ones.
+
+example:
+code of the procedure:
+CREATE OR REPLACE PROCEDURE NEW_GRADE(GRADE_NUMBER NUMBER, P_LOSAL NUMBER, P_HISAL NUMBER)
+IS
+BEGIN
+   INSERT INTO JOB_GRADES VALUES (GRADE_NUMBER, P_LOSAL, P_HISAL);
+   COMMIT;
+END;
+/
+
+execution of the procedure:
+
+BEGIN
+   NEW_GRADE(10,10000,20000);
+END;
+/
+
+
+PL/SQL functions are named programs, so - similarly to procedures they can be stored in a database.
+A PL/SQL function always returns a single one result.
+As functions are stored in databases, their lifecycle is exactly the same as in case of procedures.
+
+Example:
+code:
+CREATE OR REPLACE FUNCTION FACTORIAL(N NUMBER) RETURN NUMBER
+IS
+   V_RESULT NUMBER(10) := 1;
+BEGIN
+   FOR I IN 1..N LOOP
+     V_RESULT := V_RESULT*I;
+   END LOOP;
+
+   RETURN V_RESULT;
+END;
+/
+
+DECLARE
+   v_n NUMBER(10);
+BEGIN
+   V_N := FACTORIAL(4);
+   DBMS_OUTPUT.PUT_LINE(V_N);
+END;
+/  
+
+
+PL/SQL packages are libraries of procedures and functions. They always have names, so they are stored in databases
+and their lifecycle is exactly the same as in case of procedures and functions.
+
+Triggers: named PL/SQL programs (stored in database). In opposition to procedures or functions 
+they are executed automatically: triggers are always associated with some events 
+(like a DML statement on a particular table). When such event occurs it executes (triggers) its triggers.
+
+
+example:
+
+CREATE OR REPLACE TRIGGER TR_DEPT
+BEFORE INSERT ON DEPARTMENTS FOR EACH ROW
+BEGIN
+   IF :NEW.DEPARTMENT_NAME IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20000,'Department Name can not NULL !!!');
+   END IF;
+END;
+/
+
+
+
+Anonynous PL/SQL blocks (in details):
+
+DECLARE
+   x number(10);
+   y number(10) := 200000;
+   z number(10) := 300000;
+BEGIN
+   x := 10;
+   NEW_GRADE(x,y,z);
+   DBMS_OUPTUT.PUT_LINE
+   ('New grade has been inserted: '||x);
+END;
+/
+
+
+The most important PL/SQL syntax rules:
+1. Pl/SQL is not a case sensitive language (it doesn't matter if your write a PL/SQL instruction in upper or lower cases)
+
+2. Every PL/SQL instruction needs to be ended by semicolon (;)
+
+3. Basic components of anonymous PL/SQL blocks: 
+   declaration section (starts with DECLARE and ends by BEGIN)
+   	optional section - we don't need to use this section if we don't need to declare anything (variables, constants, etc)
+   execution section (between BEGIN and END)
+   - sekcja wykonywalna (pomiedzy slowami BEGIN i END)
+     this section is mandatory and contains instructions, which are executed when we execute a program.
+
+4. PL/SQL allows for declaring variables (named memory areas storing values), like X, Y or Z
+   PL/SQL oczyiwscie umozliwia deklarowanie i wykorzystywanie ZMIENNYCH, czyli nazwanych obszarow pamieci
+
+   a variable declaration consists of
+   - providing its name (like X or Y, however it is recommended to use more descriptive names)
+   - providing its datatype (in the above case it is NUMBER)
+   - in case, when a datatype allows for providing its length or number of digits, 
+     these values can be provided in round brackets
+   - optionally: assigment of a default value
+   - declaration of a variable also ends by semicolon
+
+Data Types in PL/SQL
+   Set of datatypes in PL/SQL is, in fact, a superset of SQL datatypes
+   - every SQL datatype exists also in PL/SQL
+   - there are some PL/SQL datatypes (like arrays or records) which don't exist in SQL 
+
+
+   
+     
+
+
